@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cost-Benefit Analysis — Journal</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2f6fa8" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Cost-Benefit" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="page">
+  <header class="intro archive-header">
+    <h1>Journal</h1>
+    <p>Write freely as you go. Entries are saved automatically and kept newest first.</p>
+    <div class="actions-buttons">
+      <a href="index.html" class="button-link">Home</a>
+      <a href="archive.html" class="button-link">View Archive</a>
+      <button type="button" id="downloadAll" class="primary">Download All (Backup)</button>
+    </div>
+  </header>
+
+  <section class="journal-form">
+    <textarea id="entryInput" rows="4" placeholder="What's on your mind today?"></textarea>
+    <button type="button" id="saveEntry" class="primary">Save Entry</button>
+  </section>
+
+  <section id="journalList" class="journal-list"></section>
+  <p id="emptyState" class="empty-state" hidden>
+    No journal entries yet. Write your first one above.
+  </p>
+</main>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="journal.js"></script>
+</body>
+</html>

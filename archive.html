@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cost-Benefit Analysis — Archive</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2f6fa8" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Cost-Benefit" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="page">
+  <header class="intro archive-header">
+    <h1>Archive</h1>
+    <p>
+      Saved cost-benefit analyses. Expand one to look back on it or download
+      it as a PDF to keep or share.
+    </p>
+    <div class="actions-buttons">
+      <a href="index.html" class="button-link">Home</a>
+      <a href="journal.html" class="button-link">View Journal</a>
+      <button type="button" id="downloadAll" class="primary">Download All (Backup)</button>
+    </div>
+  </header>
+
+  <section id="archiveList" class="archive-list"></section>
+  <p id="emptyState" class="empty-state" hidden>
+    No saved analyses yet. Save one from the editor.
+  </p>
+</main>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="archive.js"></script>
+</body>
+</html>

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>logic.js tests</title>
+<style>
+  body { font-family: monospace; padding: 1.5rem; }
+  .pass { color: #1a7f37; }
+  .fail { color: #c62828; font-weight: bold; }
+  li { margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+<h1>logic.js unit tests</h1>
+<ul id="results"></ul>
+<p id="summary"></p>
+
+<script>
+function createItem(text) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text,
+    starred: false,
+  };
+}
+
+function addItem(list, text) {
+  const trimmed = text.trim();
+  if (!trimmed) return list;
+  return [...list, createItem(trimmed)];
+}
+
+function removeItem(list, id) {
+  return list.filter((item) => item.id !== id);
+}
+
+function toggleStar(list, id) {
+  return list.map((item) =>
+    item.id === id ? { ...item, starred: !item.starred } : item
+  );
+}
+
+function todayISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const DEGERUND_SPECIAL_CASES = {
+  lying: "lie",
+  dying: "die",
+  tying: "tie",
+  binging: "binge",
+};
+
+function degerund(word) {
+  const lower = word.toLowerCase();
+  if (DEGERUND_SPECIAL_CASES[lower]) return DEGERUND_SPECIAL_CASES[lower];
+  if (!lower.endsWith("ing") || lower.length < 5) return lower;
+
+  const stem = lower.slice(0, -3);
+  const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+  const DOUBLING_CONSONANTS = new Set(["b", "d", "g", "k", "m", "n", "p", "r", "t"]);
+  const last = stem[stem.length - 1];
+  const secondLast = stem[stem.length - 2];
+  const thirdLast = stem[stem.length - 3];
+
+  if (last === "v") return `${stem}e`;
+
+  if (secondLast && last === secondLast && DOUBLING_CONSONANTS.has(last)) {
+    return stem.slice(0, -1);
+  }
+
+  if (last === "l" && secondLast && !VOWELS.has(secondLast) && secondLast !== "l") {
+    return `${stem}e`;
+  }
+
+  if (last === "g" && secondLast && !VOWELS.has(secondLast) && secondLast !== "n" && secondLast !== "g") {
+    return `${stem}e`;
+  }
+
+  if (!VOWELS.has(last) && secondLast && VOWELS.has(secondLast) && (!thirdLast || !VOWELS.has(thirdLast))) {
+    return `${stem}e`;
+  }
+
+  return stem;
+}
+
+function verbPhraseFromBehavior(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  const [firstWord, ...rest] = trimmed.split(/\s+/);
+  const verb = degerund(firstWord);
+  return rest.length ? `${verb} ${rest.join(" ")}` : verb;
+}
+
+function createEmptyAnalysis() {
+  return {
+    behavior: "",
+    date: todayISO(),
+    doBenefits: [],
+    doCosts: [],
+    dontBenefits: [],
+    dontCosts: [],
+    reflection: "",
+  };
+}
+
+function serialize(analysis) {
+  return JSON.stringify(analysis);
+}
+
+function deserialize(json) {
+  const parsed = JSON.parse(json);
+  const empty = createEmptyAnalysis();
+  return { ...empty, ...parsed };
+}
+
+function createArchiveEntry(analysis) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    savedAt: new Date().toISOString(),
+    analysis: JSON.parse(JSON.stringify(analysis)),
+  };
+}
+
+function addArchiveEntry(archive, analysis) {
+  return [...archive, createArchiveEntry(analysis)];
+}
+
+function removeArchiveEntry(archive, id) {
+  return archive.filter((entry) => entry.id !== id);
+}
+
+function serializeArchive(archive) {
+  return JSON.stringify(archive);
+}
+
+function deserializeArchive(json) {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const LIST_KEYS = ["doBenefits", "doCosts", "dontBenefits", "dontCosts"];
+
+function createAnalysisTab() {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    analysis: createEmptyAnalysis(),
+  };
+}
+
+function addAnalysisTab(tabs) {
+  return [...tabs, createAnalysisTab()];
+}
+
+function removeAnalysisTab(tabs, id) {
+  return tabs.filter((t) => t.id !== id);
+}
+
+function hasAnalysisContent(analysis) {
+  return Boolean(
+    analysis.behavior ||
+      analysis.reflection ||
+      LIST_KEYS.some((key) => analysis[key].length > 0)
+  );
+}
+
+function createAnalysesState() {
+  const tab = createAnalysisTab();
+  return { activeId: tab.id, analyses: [tab] };
+}
+
+function serializeAnalyses(state) {
+  return JSON.stringify(state);
+}
+
+function deserializeAnalyses(json) {
+  if (!json) return createAnalysesState();
+  try {
+    const parsed = JSON.parse(json);
+    if (!parsed || !Array.isArray(parsed.analyses) || parsed.analyses.length === 0) {
+      return createAnalysesState();
+    }
+    return { activeId: parsed.activeId ?? parsed.analyses[0].id, analyses: parsed.analyses };
+  } catch {
+    return createAnalysesState();
+  }
+}
+
+function createTracker(label) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label,
+    startDate: null,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function addTracker(trackers, label) {
+  const trimmed = label.trim();
+  if (!trimmed) return trackers;
+  return [...trackers, createTracker(trimmed)];
+}
+
+function removeTracker(trackers, id) {
+  return trackers.filter((t) => t.id !== id);
+}
+
+function startTracker(tracker) {
+  return { ...tracker, startDate: todayISO() };
+}
+
+function resetTracker(tracker) {
+  return { ...tracker, startDate: null };
+}
+
+function daysElapsed(startDate, today = todayISO()) {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${today}T00:00:00`);
+  const diffDays = Math.round((end - start) / 86400000);
+  return diffDays + 1;
+}
+
+function createTrackersState() {
+  return { activeId: null, trackers: [] };
+}
+
+function serializeTrackers(state) {
+  return JSON.stringify(state);
+}
+
+function deserializeTrackers(json) {
+  if (!json) return createTrackersState();
+  try {
+    const parsed = JSON.parse(json);
+    if (!parsed || !Array.isArray(parsed.trackers)) return createTrackersState();
+    return { activeId: parsed.activeId ?? null, trackers: parsed.trackers };
+  } catch {
+    return createTrackersState();
+  }
+}
+
+function createJournalEntry(text) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function addJournalEntry(entries, text) {
+  const trimmed = text.trim();
+  if (!trimmed) return entries;
+  return [...entries, createJournalEntry(trimmed)];
+}
+
+function removeJournalEntry(entries, id) {
+  return entries.filter((entry) => entry.id !== id);
+}
+
+function serializeJournal(entries) {
+  return JSON.stringify(entries);
+}
+
+function deserializeJournal(json) {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function assertEqual(actual, expected, msg) {
+  const a = JSON.stringify(actual);
+  const e = JSON.stringify(expected);
+  if (a !== e) throw new Error(`${msg}: expected ${e}, got ${a}`);
+}
+function assertTrue(value, msg) {
+  if (!value) throw new Error(msg);
+}
+function assertMatch(value, regex, msg) {
+  if (!regex.test(value)) throw new Error(`${msg}: "${value}" did not match ${regex}`);
+}
+
+const tests = [];
+function test(name, fn) { tests.push({ name, fn }); }
+
+test("createItem builds an unstarred item with the given text", () => {
+  const item = createItem("Feel more alert");
+  assertEqual(item.text, "Feel more alert", "text");
+  assertEqual(item.starred, false, "starred");
+  assertTrue(item.id, "id should be set");
+});
+
+test("addItem appends a trimmed item and ignores blank input", () => {
+  let list = [];
+  list = addItem(list, "  Save money  ");
+  assertEqual(list.length, 1, "length after add");
+  assertEqual(list[0].text, "Save money", "trimmed text");
+
+  list = addItem(list, "   ");
+  assertEqual(list.length, 1, "blank text should not be added");
+});
+
+test("removeItem removes only the matching id", () => {
+  let list = addItem([], "Hangovers");
+  list = addItem(list, "Losing trust");
+  const [first, second] = list;
+
+  list = removeItem(list, first.id);
+  assertEqual(list.length, 1, "length after remove");
+  assertEqual(list[0].id, second.id, "remaining item id");
+});
+
+test("toggleStar flips starred without affecting other items", () => {
+  let list = addItem([], "Body aches");
+  list = addItem(list, "Feel stressed");
+  const [first, second] = list;
+
+  list = toggleStar(list, first.id);
+  assertEqual(list.find((i) => i.id === first.id).starred, true, "first starred");
+  assertEqual(list.find((i) => i.id === second.id).starred, false, "second untouched");
+
+  list = toggleStar(list, first.id);
+  assertEqual(list.find((i) => i.id === first.id).starred, false, "first unstarred again");
+});
+
+test("createEmptyAnalysis has the full expected shape", () => {
+  const analysis = createEmptyAnalysis();
+  assertEqual(analysis.behavior, "", "behavior");
+  assertMatch(analysis.date, /^\d{4}-\d{2}-\d{2}$/, "date format");
+  assertEqual(analysis.doBenefits, [], "doBenefits");
+  assertEqual(analysis.doCosts, [], "doCosts");
+  assertEqual(analysis.dontBenefits, [], "dontBenefits");
+  assertEqual(analysis.dontCosts, [], "dontCosts");
+  assertEqual(analysis.reflection, "", "reflection");
+});
+
+test("serialize/deserialize round-trips an analysis with items", () => {
+  let analysis = createEmptyAnalysis();
+  analysis.behavior = "Drinking after work";
+  analysis.doBenefits = addItem(analysis.doBenefits, "Feel more relaxed");
+  analysis.doCosts = addItem(analysis.doCosts, "Hangovers");
+  analysis.doCosts = toggleStar(analysis.doCosts, analysis.doCosts[0].id);
+  analysis.reflection = "Sacrificing long-term health for short-term relief.";
+
+  const json = serialize(analysis);
+  const restored = deserialize(json);
+
+  assertEqual(restored, analysis, "round-trip");
+});
+
+test("deserialize fills in missing fields with defaults", () => {
+  const restored = deserialize(JSON.stringify({ behavior: "Smoking" }));
+  assertEqual(restored.behavior, "Smoking", "behavior preserved");
+  assertEqual(restored.doBenefits, [], "doBenefits defaulted");
+  assertTrue(restored.date, "date defaulted");
+});
+
+test("createArchiveEntry wraps an analysis with an id and savedAt timestamp", () => {
+  const analysis = createEmptyAnalysis();
+  analysis.behavior = "Drinking after work";
+  const entry = createArchiveEntry(analysis);
+  assertTrue(entry.id, "id should be set");
+  assertTrue(entry.savedAt, "savedAt should be set");
+  assertEqual(entry.analysis, analysis, "analysis stored as-is");
+});
+
+test("addArchiveEntry always appends, even for a repeated date", () => {
+  let archive = [];
+  const analysis = createEmptyAnalysis();
+  archive = addArchiveEntry(archive, analysis);
+  archive = addArchiveEntry(archive, analysis);
+  assertEqual(archive.length, 2, "two entries added");
+  assertTrue(archive[0].id !== archive[1].id, "entries have distinct ids");
+});
+
+test("removeArchiveEntry removes only the matching id", () => {
+  let archive = [];
+  archive = addArchiveEntry(archive, createEmptyAnalysis());
+  archive = addArchiveEntry(archive, createEmptyAnalysis());
+  const [first, second] = archive;
+
+  archive = removeArchiveEntry(archive, first.id);
+  assertEqual(archive.length, 1, "length after remove");
+  assertEqual(archive[0].id, second.id, "remaining entry id");
+});
+
+test("serializeArchive/deserializeArchive round-trips", () => {
+  let archive = [];
+  const analysis = createEmptyAnalysis();
+  analysis.behavior = "Late night snacking";
+  archive = addArchiveEntry(archive, analysis);
+
+  const json = serializeArchive(archive);
+  const restored = deserializeArchive(json);
+  assertEqual(restored, archive, "round-trip");
+});
+
+test("deserializeArchive defaults to an empty array for missing or invalid data", () => {
+  assertEqual(deserializeArchive(null), [], "null defaults to []");
+  assertEqual(deserializeArchive(""), [], "empty string defaults to []");
+  assertEqual(deserializeArchive("not json"), [], "invalid json defaults to []");
+  assertEqual(deserializeArchive(JSON.stringify({ not: "an array" })), [], "non-array defaults to []");
+});
+
+test("createTracker builds a not-started tracker with the given label", () => {
+  const tracker = createTracker("No drinking");
+  assertEqual(tracker.label, "No drinking", "label");
+  assertEqual(tracker.startDate, null, "not started");
+  assertTrue(tracker.id, "id should be set");
+});
+
+test("addTracker appends a trimmed tracker and ignores blank input", () => {
+  let trackers = [];
+  trackers = addTracker(trackers, "  Daily exercise  ");
+  assertEqual(trackers.length, 1, "length after add");
+  assertEqual(trackers[0].label, "Daily exercise", "trimmed label");
+
+  trackers = addTracker(trackers, "   ");
+  assertEqual(trackers.length, 1, "blank label should not be added");
+});
+
+test("removeTracker removes only the matching id", () => {
+  let trackers = addTracker([], "No drinking");
+  trackers = addTracker(trackers, "Daily exercise");
+  const [first, second] = trackers;
+
+  trackers = removeTracker(trackers, first.id);
+  assertEqual(trackers.length, 1, "length after remove");
+  assertEqual(trackers[0].id, second.id, "remaining tracker id");
+});
+
+test("startTracker sets startDate, resetTracker clears it", () => {
+  const tracker = createTracker("No drinking");
+  const started = startTracker(tracker);
+  assertTrue(started.startDate, "startDate set after start");
+
+  const reset = resetTracker(started);
+  assertEqual(reset.startDate, null, "startDate cleared after reset");
+});
+
+test("daysElapsed counts the start day as Day 1", () => {
+  assertEqual(daysElapsed("2026-07-01", "2026-07-01"), 1, "same day is Day 1");
+  assertEqual(daysElapsed("2026-07-01", "2026-07-02"), 2, "next day is Day 2");
+  assertEqual(daysElapsed("2026-07-01", "2026-07-15"), 15, "two weeks later is Day 15");
+});
+
+test("serializeTrackers/deserializeTrackers round-trips", () => {
+  let state = createTrackersState();
+  state.trackers = addTracker(state.trackers, "No drinking");
+  state.activeId = state.trackers[0].id;
+
+  const json = serializeTrackers(state);
+  const restored = deserializeTrackers(json);
+  assertEqual(restored, state, "round-trip");
+});
+
+test("deserializeTrackers defaults to an empty state for missing or invalid data", () => {
+  assertEqual(deserializeTrackers(null), createTrackersState(), "null defaults");
+  assertEqual(deserializeTrackers(""), createTrackersState(), "empty string defaults");
+  assertEqual(deserializeTrackers("not json"), createTrackersState(), "invalid json defaults");
+  assertEqual(deserializeTrackers(JSON.stringify({ not: "valid" })), createTrackersState(), "missing trackers array defaults");
+});
+
+test("createJournalEntry builds an entry with text and a timestamp", () => {
+  const entry = createJournalEntry("Feeling good today");
+  assertEqual(entry.text, "Feeling good today", "text");
+  assertTrue(entry.id, "id should be set");
+  assertTrue(entry.createdAt, "createdAt should be set");
+});
+
+test("addJournalEntry appends a trimmed entry and ignores blank input", () => {
+  let entries = [];
+  entries = addJournalEntry(entries, "  Long day today  ");
+  assertEqual(entries.length, 1, "length after add");
+  assertEqual(entries[0].text, "Long day today", "trimmed text");
+
+  entries = addJournalEntry(entries, "   ");
+  assertEqual(entries.length, 1, "blank text should not be added");
+});
+
+test("removeJournalEntry removes only the matching id", () => {
+  let entries = addJournalEntry([], "First entry");
+  entries = addJournalEntry(entries, "Second entry");
+  const [first, second] = entries;
+
+  entries = removeJournalEntry(entries, first.id);
+  assertEqual(entries.length, 1, "length after remove");
+  assertEqual(entries[0].id, second.id, "remaining entry id");
+});
+
+test("serializeJournal/deserializeJournal round-trips", () => {
+  let entries = addJournalEntry([], "Feeling hopeful");
+  const json = serializeJournal(entries);
+  const restored = deserializeJournal(json);
+  assertEqual(restored, entries, "round-trip");
+});
+
+test("deserializeJournal defaults to an empty array for missing or invalid data", () => {
+  assertEqual(deserializeJournal(null), [], "null defaults to []");
+  assertEqual(deserializeJournal(""), [], "empty string defaults to []");
+  assertEqual(deserializeJournal("not json"), [], "invalid json defaults to []");
+  assertEqual(deserializeJournal(JSON.stringify({ not: "an array" })), [], "non-array defaults to []");
+});
+
+test("createAnalysisTab builds a tab with a blank analysis", () => {
+  const tab = createAnalysisTab();
+  assertTrue(tab.id, "id should be set");
+  assertEqual(tab.analysis.behavior, "", "fresh analysis is blank");
+});
+
+test("addAnalysisTab appends a new blank tab each time", () => {
+  let tabs = addAnalysisTab([]);
+  assertEqual(tabs.length, 1, "length after first add");
+  tabs = addAnalysisTab(tabs);
+  assertEqual(tabs.length, 2, "length after second add");
+  assertTrue(tabs[0].id !== tabs[1].id, "tabs have distinct ids");
+});
+
+test("removeAnalysisTab removes only the matching id", () => {
+  let tabs = addAnalysisTab([]);
+  tabs = addAnalysisTab(tabs);
+  const [first, second] = tabs;
+
+  tabs = removeAnalysisTab(tabs, first.id);
+  assertEqual(tabs.length, 1, "length after remove");
+  assertEqual(tabs[0].id, second.id, "remaining tab id");
+});
+
+test("hasAnalysisContent detects behavior, reflection, and list content", () => {
+  assertEqual(hasAnalysisContent(createEmptyAnalysis()), false, "blank analysis has no content");
+  assertEqual(hasAnalysisContent({ ...createEmptyAnalysis(), behavior: "Drinking" }), true, "behavior counts");
+  assertEqual(hasAnalysisContent({ ...createEmptyAnalysis(), reflection: "Some notes" }), true, "notes count");
+
+  const withItem = createEmptyAnalysis();
+  withItem.doBenefits = addItem(withItem.doBenefits, "Feel comforted");
+  assertEqual(hasAnalysisContent(withItem), true, "a list item counts as content");
+});
+
+test("serializeAnalyses/deserializeAnalyses round-trips", () => {
+  const state = createAnalysesState();
+  state.analyses[0].analysis.behavior = "Drinking after work";
+
+  const json = serializeAnalyses(state);
+  const restored = deserializeAnalyses(json);
+  assertEqual(restored, state, "round-trip");
+});
+
+test("deserializeAnalyses defaults to a fresh single tab for missing or invalid data", () => {
+  const invalidInputs = [null, "", "not json", JSON.stringify({ not: "valid" }), JSON.stringify({ analyses: [] })];
+  for (const invalidJson of invalidInputs) {
+    const state = deserializeAnalyses(invalidJson);
+    assertEqual(state.analyses.length, 1, `exactly one tab for: ${invalidJson}`);
+    assertEqual(state.activeId, state.analyses[0].id, `activeId matches the tab for: ${invalidJson}`);
+    assertEqual(state.analyses[0].analysis.behavior, "", `fresh analysis is blank for: ${invalidJson}`);
+  }
+});
+
+test("degerund converts common gerunds to their base verb form", () => {
+  const cases = {
+    gambling: "gamble",
+    drinking: "drink",
+    smoking: "smoke",
+    eating: "eat",
+    spending: "spend",
+    scrolling: "scroll",
+    snacking: "snack",
+    vaping: "vape",
+    texting: "text",
+    shopping: "shop",
+    gaming: "game",
+    working: "work",
+    yelling: "yell",
+    lying: "lie",
+    cheating: "cheat",
+    isolating: "isolate",
+    avoiding: "avoid",
+    procrastinating: "procrastinate",
+    purging: "purge",
+    judging: "judge",
+    singing: "sing",
+    starving: "starve",
+    biting: "bite",
+    worrying: "worry",
+    binging: "binge",
+  };
+  for (const [gerund, expected] of Object.entries(cases)) {
+    assertEqual(degerund(gerund), expected, `${gerund} -> ${expected}`);
+  }
+});
+
+test("degerund leaves non-gerund words unchanged", () => {
+  assertEqual(degerund("gambling".slice(0, 4)), "gamb", "short word returned as-is");
+  assertEqual(degerund("shopping-online"), "shopping-online", "no trailing ing, unchanged");
+});
+
+test("verbPhraseFromBehavior transforms only the leading verb, keeping the rest of the phrase", () => {
+  assertEqual(verbPhraseFromBehavior("Drinking after work"), "drink after work", "multi-word phrase");
+  assertEqual(verbPhraseFromBehavior("Gambling"), "gamble", "single word");
+  assertEqual(verbPhraseFromBehavior("  "), "", "blank input returns empty string");
+  assertEqual(verbPhraseFromBehavior(""), "", "empty input returns empty string");
+});
+
+const results = document.getElementById("results");
+let passed = 0;
+for (const { name, fn } of tests) {
+  const li = document.createElement("li");
+  try {
+    fn();
+    li.className = "pass";
+    li.textContent = `PASS - ${name}`;
+    passed++;
+  } catch (err) {
+    li.className = "fail";
+    li.textContent = `FAIL - ${name}: ${err.message}`;
+  }
+  results.appendChild(li);
+}
+document.getElementById("summary").textContent = `${passed}/${tests.length} passed`;
+console.log(`${passed}/${tests.length} passed`);
+</script>
+</body>
+</html>

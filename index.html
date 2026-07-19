@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cost-Benefit Analysis</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2f6fa8" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Cost-Benefit" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <h1>Cost-Benefit Analysis</h1>
+  </header>
+
+  <div class="analysis-tabs" id="analysisTabs"></div>
+
+  <section class="fields">
+    <label>
+      I want to focus on
+      <input type="text" id="behavior" placeholder="e.g. Drinking after work" />
+    </label>
+    <label>
+      Today's date
+      <input type="date" id="date" />
+    </label>
+  </section>
+
+  <section class="behavior-block">
+    <h2 id="doHeading">When I do this behavior</h2>
+    <div class="columns">
+      <div class="column" data-list="doBenefits">
+        <h3>Benefits <span class="hint">(rewards or advantages)</span></h3>
+        <ul class="item-list"></ul>
+        <form class="add-form">
+          <input type="text" placeholder="Add a benefit…" />
+          <button type="submit">Add</button>
+        </form>
+      </div>
+      <div class="column" data-list="doCosts">
+        <h3>Costs <span class="hint">(risks and disadvantages)</span></h3>
+        <ul class="item-list"></ul>
+        <form class="add-form">
+          <input type="text" placeholder="Add a cost…" />
+          <button type="submit">Add</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="behavior-block">
+    <h2 id="dontHeading">When I don't do this behavior</h2>
+    <div class="columns">
+      <div class="column" data-list="dontBenefits">
+        <h3>Benefits <span class="hint">(rewards or advantages)</span></h3>
+        <ul class="item-list"></ul>
+        <form class="add-form">
+          <input type="text" placeholder="Add a benefit…" />
+          <button type="submit">Add</button>
+        </form>
+      </div>
+      <div class="column" data-list="dontCosts">
+        <h3>Costs <span class="hint">(risks and disadvantages)</span></h3>
+        <ul class="item-list"></ul>
+        <form class="add-form">
+          <input type="text" placeholder="Add a cost…" />
+          <button type="submit">Add</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div class="actions-buttons">
+    <button type="button" id="saveToArchive" class="primary">Save to Archive</button>
+    <a href="archive.html" class="button-link">View Archive</a>
+    <button type="button" id="resetAnalysis" class="danger">Reset</button>
+  </div>
+
+  <section class="reflection">
+    <h2>Notes</h2>
+    <textarea id="reflection" rows="4" placeholder="Write your notes here…"></textarea>
+  </section>
+
+  <section class="progress-section">
+    <div class="tracker-tabs" id="trackerTabs"></div>
+    <div class="tracker-panel" id="trackerPanel"></div>
+  </section>
+
+  <section class="tracker-add-section">
+    <button type="button" id="showTrackerForm" class="primary">Add Tracker</button>
+    <form class="tracker-add-form" id="newTrackerForm" hidden>
+      <input type="text" id="newTrackerInput" placeholder="Name something to track…" />
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <footer class="actions">
+    <div class="actions-buttons">
+      <a href="journal.html" class="button-link">Journal</a>
+    </div>
+    <span class="save-status" id="saveStatus"></span>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
